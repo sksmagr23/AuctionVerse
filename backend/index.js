@@ -6,13 +6,19 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import connectDB from './config/db.js';
 import authRoutes from './routes/auth.route.js';
+import auctionRoutes from './routes/auction.route.js';
+import bidRoutes from './routes/bid.route.js';
 import authMiddleware from './middleware/auth.middleware.js'
 import session from 'express-session';
 import MongoStore from 'connect-mongo';
+import http from 'http';
+import { initSocket } from './config/socket.js';
 
 connectDB();
 
 const app = express();
+const server = http.createServer(app);
+const io = initSocket(server);
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
@@ -39,6 +45,8 @@ app.use(cookieParser());
 app.use(authMiddleware);
 
 app.use('/api/auth', authRoutes);
+app.use('/api/auction', auctionRoutes);
+app.use('/api/bid', bidRoutes);
 
 app.use((err, req, res, next) => {
   let statusCode = err.statusCode || 500;
@@ -53,6 +61,8 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+export { io };
