@@ -8,7 +8,6 @@ const auctionSchema = new mongoose.Schema(
     startingPrice: { type: Number, required: true },
     currentPrice: { type: Number, required: true },
     startTime: { type: Date, required: true },
-    endTime: { type: Date, required: true },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -20,6 +19,8 @@ const auctionSchema = new mongoose.Schema(
       enum: ["active", "ended", "upcoming"],
       default: "upcoming",
     },
+    winner: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    winningBid: { type: Number },
   },
   { timestamps: true }
 );

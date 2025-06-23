@@ -27,6 +27,12 @@ const userSchema = mongoose.Schema(
     profilePicture: {
       type: String,
     },
+    wonAuctions: [
+      {
+        auction: { type: mongoose.Schema.Types.ObjectId, ref: 'Auction' },
+        amount: Number,
+      }
+    ],
   },
   {
     timestamps: true,
