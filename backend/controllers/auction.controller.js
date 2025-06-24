@@ -107,4 +107,15 @@ export const getAuction = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+};
+
+export const getAllAuctions = async (req, res, next) => {
+  try {
+    const auctions = await Auction.find({})
+      .populate('createdBy', 'username')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, auctions });
+  } catch (err) {
+    next(err);
+  }
 }; 

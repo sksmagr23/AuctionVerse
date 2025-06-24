@@ -65,15 +65,28 @@ export const googleAuth = passport.authenticate('google', {
 });
 
 export const googleCallback = (req, res, next) => {
-  passport.authenticate('google', { failureRedirect: '/login' }, (err, user, info) => {
-    if (err) {
-      return next(new ApiError(500, 'OAuth error occurred'));
-    }
-    if (!user) {
-      return res.redirect('/login');
-    }
-    sendToken(user, 200, res, 'Google authentication successful');
-  })(req, res, next);
+  passport.authenticate(
+    'google',
+    {
+      failureRedirect: 'http://localhost:5173/login',
+      session: false,
+    },
+    (err, user, info) => {
+      if (err || !user) {
+        return res.redirect('http://localhost:5173/login?error=google_auth_failed');
+      }
+
+      const token = generateToken(user._id);
+      const options = {
+        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        httpOnly: true,
+      };
+
+      res
+        .cookie('token', token, options)
+        .redirect('http://localhost:5173/');
+    },
+  )(req, res, next);
 };
 
 
@@ -85,4 +98,11 @@ export const logout = (req, res) => {
       httpOnly: true,
     })
     .json(new ApiResponse(200, {}, 'Logout successful'));
+};
+
+export const getMe = (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Not authenticated' });
+  }
+  res.json({ success: true, user: req.user });
 };

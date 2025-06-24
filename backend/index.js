@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import cors from 'cors';
 import passport from './config/passport.js';
 import express from 'express';
 import cookieParser from 'cookie-parser';
@@ -17,6 +18,12 @@ import { initSocket } from './config/socket.js';
 connectDB();
 
 const app = express();
+
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true
+}));
+
 const server = http.createServer(app);
 const io = initSocket(server);
 

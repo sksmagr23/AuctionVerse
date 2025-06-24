@@ -63,12 +63,12 @@ All protected endpoints require authentication via session cookies. After login/
 ### Google OAuth Login
 - **Method:** `GET`
 - **URL:** `/auth/google`
-- **Response:** Redirects to Google OAuth
+- **Response:** Redirects to Google's OAuth consent screen.
 
 ### Google OAuth Callback
 - **Method:** `GET`
 - **URL:** `/auth/google/callback`
-- **Response:** Redirects to frontend with session
+- **Response:** On success, redirects to the frontend with an authenticated session. On failure, redirects to `/login`.
 
 ### Logout
 - **Method:** `POST`
@@ -78,6 +78,31 @@ All protected endpoints require authentication via session cookies. After login/
   {
     "success": true,
     "message": "Logged out successfully"
+  }
+  ```
+
+### Get Current User
+- **Method:** `GET`
+- **URL:** `/auth/me`
+- **Headers:** None required (cookie is sent automatically)
+- **Response:**
+  ```json
+  {
+    "success": true,
+    "user": {
+      "_id": "user_id",
+      "username": "john_doe",
+      "email": "john@example.com",
+      "wonAuctions": []
+    }
+  }
+  ```
+- **Error Response (not authenticated):**
+  ```json
+  {
+    "success": false,
+    "message": "Not authenticated",
+    "statusCode": 401
   }
   ```
 
