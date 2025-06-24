@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import auctionService from '../services/auction.service';
 
@@ -9,7 +9,18 @@ const CreateAuction = () => {
   const [startTime, setStartTime] = useState('');
   const [itemImage, setItemImage] = useState(null);
   const [error, setError] = useState('');
+  const [minTime, setMinTime] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    setMinTime(`${year}-${month}-${day}T${hours}:${minutes}`);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,7 +30,7 @@ const CreateAuction = () => {
     formData.append('title', title);
     formData.append('description', description);
     formData.append('startingPrice', startingPrice);
-    formData.append('startTime', startTime);
+    formData.append('startTime', new Date(startTime).toISOString());
     if (itemImage) {
       formData.append('itemImage', itemImage);
     }
@@ -57,7 +68,7 @@ const CreateAuction = () => {
         
         <div className="mb-4">
           <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="startTime">Start Time</label>
-          <input type="datetime-local" id="startTime" value={startTime} onChange={(e) => setStartTime(e.target.value)} required className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" />
+          <input type="datetime-local" id="startTime" value={startTime} min={minTime} onChange={(e) => setStartTime(e.target.value)} required className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" />
         </div>
         
         <div className="mb-6">

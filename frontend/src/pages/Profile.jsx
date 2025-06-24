@@ -1,9 +1,30 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
+import { useSocket } from '../contexts/SocketContext';
+import authService from '../services/auth.service';
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, login } = useAuth();
+  const socket = useSocket();
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleAuctionEnded = async () => {
+      try {
+        const res = await authService.getMe();
+        if (res.data.success) {
+          login(res.data.data || res.data.user);
+        }
+      } catch (err) {
+        console.log('Error fetching user after auctionEnded:', err);
+      }
+    };
+    socket.on('auctionEnded', handleAuctionEnded);
+    return () => {
+      socket.off('auctionEnded', handleAuctionEnded);
+    };
+  }, [socket, login]);
 
   if (!user) {
     return <p className="text-center mt-8">You must be logged in to view your profile.</p>;

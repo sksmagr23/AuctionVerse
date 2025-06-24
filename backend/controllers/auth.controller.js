@@ -68,12 +68,12 @@ export const googleCallback = (req, res, next) => {
   passport.authenticate(
     'google',
     {
-      failureRedirect: 'http://localhost:5173/login',
+      failureRedirect: `${process.env.FRONTEND_URL}/login`,
       session: false,
     },
     (err, user, info) => {
       if (err || !user) {
-        return res.redirect('http://localhost:5173/login?error=google_auth_failed');
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_auth_failed`);
       }
 
       const token = generateToken(user._id);
@@ -84,7 +84,7 @@ export const googleCallback = (req, res, next) => {
 
       res
         .cookie('token', token, options)
-        .redirect('http://localhost:5173/');
+        .redirect(`${process.env.FRONTEND_URL}/`);
     },
   )(req, res, next);
 };
@@ -100,7 +100,7 @@ export const logout = (req, res) => {
     .json(new ApiResponse(200, {}, 'Logout successful'));
 };
 
-export const getMe = (req, res) => {
+export const getUser = (req, res) => {
   if (!req.user) {
     return res.status(401).json({ success: false, message: 'Not authenticated' });
   }

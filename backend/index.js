@@ -14,6 +14,7 @@ import session from 'express-session';
 import MongoStore from 'connect-mongo';
 import http from 'http';
 import { initSocket } from './config/socket.js';
+import { auctionStatusUpdater } from './utils/auctionStatusUpdater.js';
 
 connectDB();
 
@@ -48,12 +49,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-
 app.use(authMiddleware);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/auction', auctionRoutes);
 app.use('/api/bid', bidRoutes);
+
+auctionStatusUpdater();
 
 app.use((err, req, res, next) => {
   let statusCode = err.statusCode || 500;

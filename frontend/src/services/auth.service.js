@@ -1,34 +1,34 @@
 import axios from 'axios';
 
-axios.defaults.withCredentials = true; // Always send cookies
+axios.defaults.withCredentials = true;
 
-const API_URL = 'http://localhost:3000/api/auth';
+const BACKEND_URL = import.meta.env.VITE_REACT_APP_BACKEND_URL;
 
 const register = (username, email, password) => {
-  return axios.post(`${API_URL}/register`, { username, email, password });
+  return axios.post(`${BACKEND_URL}/auth/register`, { username, email, password });
 };
 
 const login = (email, password) => {
-  return axios.post(`${API_URL}/login`, { email, password });
+  return axios.post(`${BACKEND_URL}/auth/login`, { email, password });
 };
 
 const logout = () => {
-  return axios.post(`${API_URL}/logout`);
+  return axios.post(`${BACKEND_URL}/auth/logout`);
 };
 
-const getMe = () => {
-  return axios.get(`${API_URL}/me`);
+const getUser = () => {
+  return axios.get(`${BACKEND_URL}/auth/user`);
 };
 
 const googleLogin = () => {
-  window.location.href = `${API_URL}/google`;
+  window.location.href = `${BACKEND_URL}/auth/google`;
 };
 
 const authService = {
   register,
   login,
   logout,
-  getMe,
+  getUser,
   googleLogin,
 };
 

@@ -13,11 +13,11 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
     const checkUser = async () => {
       try {
-        const res = await authService.getMe();
+        const res = await authService.getUser();
         if (res.data.success) {
           setUser(res.data.user);
         }

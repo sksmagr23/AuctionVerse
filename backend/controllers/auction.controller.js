@@ -8,6 +8,11 @@ import Bid from '../models/Bid.js';
 export const createAuction = async (req, res, next) => {
   try {
     const { title, description, startingPrice, startTime } = req.body;
+
+    if (new Date(startTime) <= new Date()) {
+      return next(new ApiError('Start time must be in the future.', 400));
+    }
+
     let itemImage = null;
 
     const start = new Date(startTime);

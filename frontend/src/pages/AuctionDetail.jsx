@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import auctionService from '../services/auction.service';
 import bidService from '../services/bid.service';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
+import { formatToIST } from '../utils/formatDate';
 
 const AuctionDetail = () => {
   const { id } = useParams();
@@ -11,12 +12,13 @@ const AuctionDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bidAmount, setBidAmount] = useState('');
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const socket = useSocket();
 
   useEffect(() => {
     const fetchAuction = async () => {
       try {
+        setLoading(true);
         const response = await auctionService.getAuction(id);
         if (response.data.success) {
           setAuction(response.data.auction);
@@ -32,18 +34,23 @@ const AuctionDetail = () => {
 
     if (socket) {
       socket.emit('joinAuction', id);
-
       socket.on('bidPlaced', (data) => {
         if (data.bid.auction === id) {
-          setAuction((prevAuction) => ({
-            ...prevAuction,
+          setAuction((prev) => ({
+            ...prev,
             currentPrice: data.currentPrice,
           }));
+        }
+      });
+      socket.on('auctionEnded', (data) => {
+        if (data.auctionId === id) {
+          fetchAuction();
         }
       });
 
       return () => {
         socket.off('bidPlaced');
+        socket.off('auctionEnded');
       };
     }
   }, [id, socket]);
@@ -52,55 +59,128 @@ const AuctionDetail = () => {
     e.preventDefault();
     try {
       await bidService.placeBid(id, bidAmount);
+      setError('');
     } catch (err) {
       setError(err.response?.data?.message || 'Could not place bid.');
     }
   };
 
-  if (loading) return <p>Loading auction details...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
-  if (!auction) return <p>Auction not found.</p>;
+  const handleEndAuction = async () => {
+    if (window.confirm('Are you sure you want to end this auction?')) {
+      try {
+        await auctionService.endAuction(id);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Could not end auction.');
+      }
+    }
+  };
+
+  if (loading) return <div className="text-center mt-8">Loading auction details...</div>;
+  if (error && !auction) return <p className="text-red-500 text-center mt-8">{error}</p>;
+  if (!auction) return <p className="text-center mt-8">Auction not found.</p>;
+
+  const isOwner = user && user._id === auction.createdBy._id;
+  const statusColor = {
+    upcoming: 'bg-yellow-500',
+    active: 'bg-green-500',
+    ended: 'bg-red-500',
+  };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div>
-        <img
-          className="w-full h-auto rounded-lg shadow-lg"
-          src={auction.itemImage || 'https://via.placeholder.com/800x600'}
-          alt={auction.title}
-        />
-      </div>
-      <div>
-        <h1 className="text-3xl font-bold mb-2">{auction.title}</h1>
-        <p className="text-gray-600 mb-4">Created by {auction.createdBy?.username}</p>
-        <p className="text-gray-800 mb-6">{auction.description}</p>
-        
-        <div className="bg-gray-100 p-6 rounded-lg">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-lg font-semibold">Current Price:</span>
-            <span className="text-3xl font-bold text-green-600">${auction.currentPrice.toLocaleString()}</span>
+    <div className="container mx-auto p-2">
+      <div className="bg-white shadow-xl rounded-lg overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2">
+          <div className="p-4">
+            <img
+              className="w-full object-cover rounded-lg"
+              src={auction.itemImage || '/auction.png'}
+              alt={auction.title}
+            />
           </div>
-          
-          {isAuthenticated && auction.status === 'upcoming' && (
-            <form onSubmit={handleBidSubmit}>
-              <div className="flex items-center">
-                <input
-                  type="number"
-                  className="w-full px-4 py-2 border rounded-l-md"
-                  value={bidAmount}
-                  onChange={(e) => setBidAmount(e.target.value)}
-                  min={auction.currentPrice + 1}
-                />
-                <button
-                  type="submit"
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r-md"
+          <div className="p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-start">
+                <h1 className="text-4xl font-bold text-gray-800">{auction.title}</h1>
+                <span
+                  className={`px-3 py-1 text-sm font-semibold text-white rounded-full ${
+                    statusColor[auction.status] || 'bg-gray-500'
+                  }`}
                 >
-                  Place Bid
-                </button>
+                  {auction.status.charAt(0).toUpperCase() + auction.status.slice(1)}
+                </span>
               </div>
-            </form>
-          )}
+              <p className="text-gray-600 mt-2">
+                Hosted by{' '}{auction.createdBy.username}
+              </p>
+              <p className="text-gray-700 mt-4 text-lg">{auction.description}</p>
 
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-sm text-gray-500">Auction starts on</p>
+                <p className="text-lg font-semibold">{formatToIST(auction.startTime)}</p>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              {auction.status === 'ended' ? (
+                <div className="bg-gray-100 p-6 rounded-lg text-center">
+                  <h3 className="text-2xl font-bold text-gray-800">Auction Ended</h3>
+                  {auction.winner ? (
+                    <>
+                      <p className="mt-2 text-lg">
+                        Winner:{' '}
+                        <span className="font-semibold text-green-600">{auction.winner.username}</span>
+                      </p>
+                      <p className="mt-1 text-lg">
+                        Winning Bid:{' '}
+                        <span className="font-semibold text-green-600">${auction.winningBid.toLocaleString()}</span>
+                      </p>
+                    </>
+                  ) : (
+                    <p className="mt-2 text-lg text-gray-600">No bids were placed.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-gray-50 p-6 rounded-lg">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-lg font-semibold text-gray-700">Current Price:</span>
+                    <span className="text-4xl font-bold text-green-600">
+                      ${auction.currentPrice.toLocaleString()}
+                    </span>
+                  </div>
+
+                  {isAuthenticated && auction.status === 'active' && !isOwner && (
+                    <form onSubmit={handleBidSubmit}>
+                      {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+                      <div className="flex items-center">
+                        <span className="text-xl mr-2">$</span>
+                        <input
+                          type="number"
+                          className="w-full px-4 py-3 border rounded-l-md text-lg"
+                          value={bidAmount}
+                          onChange={(e) => setBidAmount(e.target.value)}
+                          min={auction.currentPrice + 1}
+                        />
+                        <button
+                          type="submit"
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-r-md text-lg"
+                        >
+                          Place Bid
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                  {isOwner && auction.status === 'active' && (
+                    <button
+                      onClick={handleEndAuction}
+                      className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded mt-4"
+                    >
+                      End Auction Now
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

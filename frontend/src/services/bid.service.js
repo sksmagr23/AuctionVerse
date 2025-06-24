@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3000/api/bid';
+const API_URL = `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/bid`;
 
 const placeBid = (auctionId, amount) => {
   return axios.post(`${API_URL}/${auctionId}/bid`, { amount });
