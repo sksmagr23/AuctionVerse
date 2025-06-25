@@ -1,118 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import auctionService from '../services/auction.service';
-import AuctionCard from '../components/AuctionCard';
-import { useSocket } from '../contexts/SocketContext';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Home = () => {
-  const [auctions, setAuctions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [updateNotification, setUpdateNotification] = useState('');
-  const socket = useSocket();
-
-  const fetchAuctions = async () => {
-    try {
-      const response = await auctionService.getAllAuctions();
-      if (response.data.success) {
-        setAuctions(response.data.auctions);
-      }
-    } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const showUpdateNotification = (message) => {
-    setUpdateNotification(message);
-    setTimeout(() => setUpdateNotification(''), 3000);
-  };
-
-  useEffect(() => {
-    fetchAuctions();
-  }, []);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    socket.on('auctionsUpdated', () => {
-      console.log('Auctions updated, refreshing list...');
-      showUpdateNotification('🔄 Auctions updated');
-      fetchAuctions();
-    });
-    socket.on('auctionCreated', (newAuction) => {
-      console.log('New auction created:', newAuction);
-      showUpdateNotification('🆕 New auction created');
-      setAuctions(prev => [newAuction, ...prev]);
-    });
-    socket.on('auctionStarted', (data) => {
-      console.log('Auction started:', data);
-      showUpdateNotification('🚀 Auction started');
-      setAuctions(prev => 
-        prev.map(auction => 
-          auction._id === data.auctionId 
-            ? { ...auction, status: 'active' }
-            : auction
-        )
-      );
-    });
-    socket.on('auctionEnded', (data) => {
-      console.log('Auction ended:', data);
-      showUpdateNotification('🏁 Auction ended');
-      setAuctions(prev => 
-        prev.map(auction => 
-          auction._id === data.auctionId 
-            ? { ...auction, status: 'ended', winner: data.winner, winningBid: data.winningBid }
-            : auction
-        )
-      );
-    });
-    socket.on('bidPlaced', (data) => {
-      console.log('Bid placed:', data);
-      showUpdateNotification('💰 New bid placed');
-      setAuctions(prev => 
-        prev.map(auction => 
-          auction._id === data.bid.auction 
-            ? { ...auction, currentPrice: data.currentPrice }
-            : auction
-        )
-      );
-    });
-
-    return () => {
-      socket.off('auctionsUpdated');
-      socket.off('auctionCreated');
-      socket.off('auctionStarted');
-      socket.off('auctionEnded');
-      socket.off('bidPlaced');
-    };
-  }, [socket]);
-
-  if (loading) return <p>Loading auctions...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
-
+  const { isAuthenticated } = useAuth();
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-3xl font-bold">Live Auctions</h1>
-          {socket && (
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-green-600 font-medium">Live</span>
-            </div>
-          )}
-        </div>
-        {updateNotification && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded animate-pulse">
-            {updateNotification}
-          </div>
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+      <h1 className="text-5xl font-extrabold text-blue-700 mb-6 drop-shadow-lg">Welcome to AuctionVerse!</h1>
+      <p className="text-lg md:text-2xl text-gray-700 max-w-2xl mb-8">
+        AuctionVerse is your gateway to a world of exciting, real-time online auctions. <br />
+        <span className="font-semibold text-blue-600">Bid, win, and connect</span> with a vibrant community. <br />
+        <span className="font-semibold">Features:</span>
+        <ul className="list-disc list-inside text-left mx-auto mt-4 mb-4 max-w-xl text-base md:text-lg">
+          <li>⚡ <span className="font-medium">Live, real-time bidding</span> with instant updates</li>
+          <li>🔒 <span className="font-medium">Secure authentication</span> (Email & Google)</li>
+          <li>🖼️ <span className="font-medium">Image uploads</span> for auction items</li>
+          <li>🏆 <span className="font-medium">Profile dashboard</span> to track your wins and activity</li>
+          <li>📱 <span className="font-medium">Modern, mobile-friendly UI</span> with smooth navigation</li>
+        </ul>
+        <span className="block mt-2">Ready to join the excitement? <span className="font-semibold text-green-600">Sign in, create an auction, or start bidding now!</span></span>
+      </p>
+      <div className="flex flex-col sm:flex-row gap-4 mt-4">
+        {!isAuthenticated && (
+          <Link to="/login" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg shadow-md transition">Get Started</Link>
         )}
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {auctions.map((auction) => (
-          <AuctionCard key={auction._id} auction={auction} />
-        ))}
+        <Link to="/auctions" className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg text-lg shadow-md transition">Browse Auctions</Link>
       </div>
     </div>
   );

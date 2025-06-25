@@ -54,8 +54,8 @@ export function auctionStatusUpdater() {
       console.error('Error updating auction statuses:', error);
     }
   };
-
-  setInterval(updateAuctionStatuses, 30000);
+  
+  setInterval(updateAuctionStatuses, 5000);
   
   updateAuctionStatuses();
 } 

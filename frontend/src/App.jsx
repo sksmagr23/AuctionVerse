@@ -8,6 +8,7 @@ import AuctionDetail from './pages/AuctionDetail';
 import CreateAuction from './pages/CreateAuction';
 import PrivateRoute from './components/PrivateRoute';
 import Profile from './pages/Profile';
+import AuctionList from './pages/AuctionList';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
               </PrivateRoute>
             }
           />
+          <Route path="auctions" element={<AuctionList />} />
         </Route>
       </Routes>
     </Router>

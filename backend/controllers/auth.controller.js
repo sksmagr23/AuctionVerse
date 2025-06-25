@@ -115,13 +115,8 @@ export const getUserProfile = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'Not authenticated');
   }
 
-  const user = await User.findById(req.user._id).populate('wonAuctions.auction', 'title');
+  const user = await User.findById(req.user._id).populate('wonAuctions.auction', 'title startTime');
   const userId = new mongoose.Types.ObjectId(req.user._id);
-
-  const activeAuctions = await Auction.find({
-    participants: userId,
-    status: { $in: ['active'] }
-  }).select('_id title currentPrice status startTime');
 
   const createdAuctions = await Auction.find({
     createdBy: userId
@@ -129,7 +124,6 @@ export const getUserProfile = asyncHandler(async (req, res) => {
 
   const profileData = {
     ...user.toObject(),
-    activeAuctions,
     createdAuctions
   };
 

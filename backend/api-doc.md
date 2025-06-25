@@ -123,18 +123,10 @@ All protected endpoints require authentication via session cookies. After login/
         {
           "auction": {
             "_id": "auction_id",
-            "title": "Vintage Watch"
+            "title": "Vintage Watch",
+            "startTime": "2024-01-01T10:00:00.000Z"
           },
           "amount": 250
-        }
-      ],
-      "activeAuctions": [
-        {
-          "_id": "auction_id",
-          "title": "Art Piece",
-          "currentPrice": 150,
-          "status": "active",
-          "startTime": "2024-01-01T10:00:00.000Z"
         }
       ],
       "createdAuctions": [
@@ -144,6 +136,13 @@ All protected endpoints require authentication via session cookies. After login/
           "currentPrice": 200,
           "status": "active",
           "startTime": "2024-01-01T10:00:00.000Z"
+        },
+        {
+          "_id": "auction_id2",
+          "title": "Old Auction",
+          "currentPrice": 100,
+          "status": "ended",
+          "startTime": "2024-01-01T09:00:00.000Z"
         }
       ],
       "createdAt": "2024-01-01T00:00:00.000Z",
@@ -151,6 +150,9 @@ All protected endpoints require authentication via session cookies. After login/
     }
   }
   ```
+- **Note:**
+  - `createdAuctions` always includes all auctions created by the user, regardless of status (`active`, `upcoming`, or `ended`).
+  - Each auction in `createdAuctions` includes its current status.
 
 ---
 

@@ -42,7 +42,7 @@ export const createAuction = async (req, res, next) => {
       currentPrice: startingPrice,
       startTime,
       createdBy: userId,
-      participants: [userId],
+      participants: [],
     });
 
     getIO().emit('auctionCreated', auction);
@@ -72,10 +72,12 @@ export const joinAuction = async (req, res, next) => {
     const auction = await Auction.findById(auctionId);
     if (!auction) return next(new ApiError(404, 'Auction not found'));
 
-    if (!auction.participants.includes(req.user._id)) {
+    if (
+      !auction.participants.includes(req.user._id) &&
+      !auction.createdBy.equals(req.user._id)
+    ) {
       auction.participants.push(req.user._id);
       await auction.save();
-      
       getIO().to(auctionId).emit('userJoined', { 
         userId: req.user._id, 
         username: req.user.username,

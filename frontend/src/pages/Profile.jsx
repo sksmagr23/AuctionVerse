@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
 import authService from '../services/auth.service';
+import { formatToIST } from '../utils/formatDate';
 
 const Profile = () => {
   const { user, login } = useAuth();
@@ -87,12 +88,6 @@ const Profile = () => {
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-4">
           <h1 className="text-3xl font-bold">Profile</h1>
-          {socket && (
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-green-600 font-medium">Live</span>
-            </div>
-          )}
         </div>
         {isUpdating && (
           <div className="flex items-center space-x-2">
@@ -140,13 +135,13 @@ const Profile = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <Link 
-                      to={`/auction/${won.auction}`} 
+                      to={`/auction/${won.auction?._id || won.auction}`}
                       className="text-blue-600 hover:text-blue-800 font-medium hover:underline"
                     >
-                      Auction #{won.auction}
+                      {won.auction?.title ? won.auction.title : `fetching`}
                     </Link>
                     <p className="text-sm text-gray-500 mt-1">
-                      Won for ${won.amount.toLocaleString()}
+                       {formatToIST(won.auction.startTime)}
                     </p>
                   </div>
                   <div className="text-right">
@@ -190,46 +185,6 @@ const Profile = () => {
           <div className="text-sm text-green-600">Total Spent</div>
         </div>
       </div>
-
-      {user.activeAuctions && user.activeAuctions.length > 0 && (
-        <div className="bg-blue-50 p-6 rounded-lg mb-6">
-          <h3 className="text-xl font-semibold mb-4 flex items-center">
-            🎯 Active Auctions
-            <span className="ml-2 bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
-              {user.activeAuctions.length}
-            </span>
-          </h3>
-          <div className="space-y-3">
-            {user.activeAuctions.map((auction, idx) => (
-              <div key={idx} className="bg-white p-4 rounded-lg border border-blue-200 hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <Link 
-                      to={`/auction/${auction._id}`} 
-                      className="text-blue-600 hover:text-blue-800 font-medium hover:underline"
-                    >
-                      {auction.title}
-                    </Link>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Status: <span className={`font-medium ${
-                        auction.status === 'active' ? 'text-green-600' : 'text-yellow-600'
-                      }`}>
-                        {auction.status.charAt(0).toUpperCase() + auction.status.slice(1)}
-                      </span>
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold text-green-600 text-lg">
-                      ${auction.currentPrice.toLocaleString()}
-                    </span>
-                    <div className="text-xs text-gray-500 mt-1">Current Price</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {user.createdAuctions && user.createdAuctions.length > 0 && (
         <div className="bg-purple-50 p-6 rounded-lg mb-6">
