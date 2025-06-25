@@ -83,7 +83,7 @@ All protected endpoints require authentication via session cookies. After login/
 
 ### Get Current User
 - **Method:** `GET`
-- **URL:** `/auth/me`
+- **URL:** `/auth/user`
 - **Headers:** None required (cookie is sent automatically)
 - **Response:**
   ```json
@@ -106,6 +106,52 @@ All protected endpoints require authentication via session cookies. After login/
   }
   ```
 
+### Get User Profile (Detailed)
+- **Method:** `GET`
+- **URL:** `/auth/profile`
+- **Headers:** None required (cookie is sent automatically)
+- **Response:**
+  ```json
+  {
+    "success": true,
+    "user": {
+      "_id": "user_id",
+      "username": "john_doe",
+      "email": "john@example.com",
+      "profilePicture": "url",
+      "wonAuctions": [
+        {
+          "auction": {
+            "_id": "auction_id",
+            "title": "Vintage Watch"
+          },
+          "amount": 250
+        }
+      ],
+      "activeAuctions": [
+        {
+          "_id": "auction_id",
+          "title": "Art Piece",
+          "currentPrice": 150,
+          "status": "active",
+          "startTime": "2024-01-01T10:00:00.000Z"
+        }
+      ],
+      "createdAuctions": [
+        {
+          "_id": "auction_id",
+          "title": "My Auction",
+          "currentPrice": 200,
+          "status": "active",
+          "startTime": "2024-01-01T10:00:00.000Z"
+        }
+      ],
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  }
+  ```
+
 ---
 
 ## 2. Auction Endpoints
@@ -122,6 +168,10 @@ All protected endpoints require authentication via session cookies. After login/
   startTime: string (required, ISO format)
   itemImage: file (optional)
   ```
+- **Constraints:**
+  - Start time must be in the future
+  - Users must have at least a 1-hour gap between their own auctions
+  - Multiple users can create auctions at the same time
 - **Response:**
   ```json
   {
@@ -148,7 +198,7 @@ All protected endpoints require authentication via session cookies. After login/
   ```json
   {
     "success": false,
-    "message": "There must be at least a 1-hour gap between any two auctions.",
+    "message": "You must have at least a 1-hour gap between your auctions.",
     "statusCode": 400
   }
   ```
@@ -288,9 +338,11 @@ All protected endpoints require authentication via session cookies. After login/
 
 ### Server to Client Events
 - `auctionCreated(auction)` - New auction created
+- `auctionStarted({ auctionId, auction })` - Auction status changed to active
 - `userJoined({ userId, auctionId })` - User joined auction
 - `bidPlaced({ bid, currentPrice })` - New bid placed
 - `auctionEnded({ auctionId, winner, winningBid })` - Auction ended with winner
+- `auctionsUpdated()` - General auction list update (refresh recommended)
 
 ---
 
@@ -315,46 +367,7 @@ All protected endpoints require authentication via session cookies. After login/
 
 ---
 
-## 6. Testing in Postman
-
-### Environment Variables
-Set these in Postman:
-- `baseUrl`: `http://localhost:3000/api`
-- `auctionId`: (will be set after creating auction)
-
-### Collection Import
-Use the JSON collection provided earlier for easy testing.
-
-### Testing Flow
-1. Register/Login user
-2. Create auction (note the auction ID)
-3. Join auction (optional)
-4. Place bids
-5. End auction (creator only)
-6. Check auction details
-
----
-
-## 7. File Upload Notes
-
-- Images are uploaded to Cloudinary
-- Supported formats: JPG, PNG, GIF, WebP
-- Maximum file size: 10MB (Cloudinary limit)
-- Images are stored in `auctionverse/items` folder on Cloudinary
-
----
-
-## 8. Real-time Features
-
-All auction actions trigger real-time updates:
-- Creating auctions broadcasts to all users
-- Joining auctions notifies room participants
-- Placing bids updates all participants in real-time
-- Ending auctions notifies all participants with winner info
-
----
-
-## 9. Database Models
+## 6. Database Models
 
 ### User Model
 ```javascript
@@ -401,21 +414,3 @@ All auction actions trigger real-time updates:
 ```
 
 ---
-
-## 10. Environment Variables Required
-
-```env
-MONGO_URL=mongodb://localhost:27017/auctionverse
-SESSION_SECRET=your_session_secret
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-PORT=3000
-NODE_ENV=development
-```
-
----
-
-This documentation covers all the endpoints and features of your AuctionVerse backend API!

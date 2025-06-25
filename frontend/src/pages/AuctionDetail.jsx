@@ -12,45 +12,76 @@ const AuctionDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bidAmount, setBidAmount] = useState('');
+  const [updateNotification, setUpdateNotification] = useState('');
   const { user, isAuthenticated } = useAuth();
   const socket = useSocket();
 
-  useEffect(() => {
-    const fetchAuction = async () => {
-      try {
-        setLoading(true);
-        const response = await auctionService.getAuction(id);
-        if (response.data.success) {
-          setAuction(response.data.auction);
-          setBidAmount(response.data.auction.currentPrice + 1);
-        }
-      } catch (err) {
-        setError(err);
-      } finally {
-        setLoading(false);
+  const fetchAuction = async () => {
+    try {
+      setLoading(true);
+      const response = await auctionService.getAuction(id);
+      if (response.data.success) {
+        setAuction(response.data.auction);
+        setBidAmount(response.data.auction.currentPrice + 1);
       }
-    };
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showUpdateNotification = (message) => {
+    setUpdateNotification(message);
+    setTimeout(() => setUpdateNotification(''), 3000);
+  };
+
+  useEffect(() => {
     fetchAuction();
 
     if (socket) {
       socket.emit('joinAuction', id);
+      
       socket.on('bidPlaced', (data) => {
         if (data.bid.auction === id) {
+          showUpdateNotification('💰 New bid placed!');
           setAuction((prev) => ({
             ...prev,
             currentPrice: data.currentPrice,
           }));
+          setBidAmount(data.currentPrice + 1);
         }
       });
       socket.on('auctionEnded', (data) => {
         if (data.auctionId === id) {
+          showUpdateNotification('🏁 Auction ended!');
           fetchAuction();
+        }
+      });
+      socket.on('auctionStarted', (data) => {
+        if (data.auctionId === id) {
+          showUpdateNotification('🚀 Auction started!');
+          setAuction((prev) => ({
+            ...prev,
+            status: 'active',
+          }));
+        }
+      });
+      socket.on('userJoined', (data) => {
+        if (data.auctionId === id) {
+          showUpdateNotification(`👤 ${data.username} joined the auction`);
+          setAuction((prev) => ({
+            ...prev,
+            participants: [...(prev.participants || []), { _id: data.userId, username: data.username }]
+          }));
         }
       });
 
       return () => {
         socket.off('bidPlaced');
         socket.off('auctionEnded');
+        socket.off('auctionStarted');
+        socket.off('userJoined');
       };
     }
   }, [id, socket]);
@@ -60,6 +91,7 @@ const AuctionDetail = () => {
     try {
       await bidService.placeBid(id, bidAmount);
       setError('');
+      showUpdateNotification('✅ Bid placed successfully!');
     } catch (err) {
       setError(err.response?.data?.message || 'Could not place bid.');
     }
@@ -69,6 +101,7 @@ const AuctionDetail = () => {
     if (window.confirm('Are you sure you want to end this auction?')) {
       try {
         await auctionService.endAuction(id);
+        showUpdateNotification('🏁 Auction ended successfully!');
       } catch (err) {
         setError(err.response?.data?.message || 'Could not end auction.');
       }
@@ -100,7 +133,15 @@ const AuctionDetail = () => {
           <div className="p-6 flex flex-col justify-between">
             <div>
               <div className="flex justify-between items-start">
-                <h1 className="text-4xl font-bold text-gray-800">{auction.title}</h1>
+                <div>
+                  <h1 className="text-4xl font-bold text-gray-800">{auction.title}</h1>
+                  {socket && auction.status === 'active' && (
+                    <div className="flex items-center space-x-2 mt-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm text-green-600 font-medium">Live</span>
+                    </div>
+                  )}
+                </div>
                 <span
                   className={`px-3 py-1 text-sm font-semibold text-white rounded-full ${
                     statusColor[auction.status] || 'bg-gray-500'
@@ -115,12 +156,28 @@ const AuctionDetail = () => {
               <p className="text-gray-700 mt-4 text-lg">{auction.description}</p>
 
               <div className="mt-4 pt-4 border-t">
-                <p className="text-sm text-gray-500">Auction starts on</p>
-                <p className="text-lg font-semibold">{formatToIST(auction.startTime)}</p>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm text-gray-500">Auction starts on</p>
+                    <p className="text-lg font-semibold">{formatToIST(auction.startTime)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500">Participants</p>
+                    <p className="text-lg font-semibold text-blue-600">
+                      {auction.participants?.length || 0}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div className="mt-6">
+              {updateNotification && (
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded mb-4 animate-pulse">
+                  {updateNotification}
+                </div>
+              )}
+
               {auction.status === 'ended' ? (
                 <div className="bg-gray-100 p-6 rounded-lg text-center">
                   <h3 className="text-2xl font-bold text-gray-800">Auction Ended</h3>

@@ -1,9 +1,11 @@
 import User from '../models/User.js';
+import Auction from '../models/Auction.js';
 import jwt from 'jsonwebtoken';
 import passport from 'passport';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
+import mongoose from 'mongoose';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -106,3 +108,30 @@ export const getUser = (req, res) => {
   }
   res.json({ success: true, user: req.user });
 };
+
+
+export const getUserProfile = asyncHandler(async (req, res) => {
+  if (!req.user) {
+    throw new ApiError(401, 'Not authenticated');
+  }
+
+  const user = await User.findById(req.user._id).populate('wonAuctions.auction', 'title');
+  const userId = new mongoose.Types.ObjectId(req.user._id);
+
+  const activeAuctions = await Auction.find({
+    participants: userId,
+    status: { $in: ['active'] }
+  }).select('_id title currentPrice status startTime');
+
+  const createdAuctions = await Auction.find({
+    createdBy: userId
+  }).select('_id title currentPrice status startTime');
+
+  const profileData = {
+    ...user.toObject(),
+    activeAuctions,
+    createdAuctions
+  };
+
+  res.json({ success: true, user: profileData });
+});

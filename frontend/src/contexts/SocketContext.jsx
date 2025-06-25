@@ -11,12 +11,13 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:3000');
+    const backendUrl = import.meta.env.VITE_REACT_APP_BACKEND_URL ;
+    const newSocket = io(backendUrl);
     setSocket(newSocket);
 
     return () => newSocket.close();
   }, []);
-
+  
   return (
     <SocketContext.Provider value={socket}>
       {children}
