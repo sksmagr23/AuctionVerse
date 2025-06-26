@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 
 export const createAuction = async (req, res, next) => {
   try {
-    const { title, description, startingPrice, startTime } = req.body;
+    const { title, description, basePrice, startTime } = req.body;
 
     if (new Date(startTime) <= new Date()) {
       return next(new ApiError(400, 'Start time must be in the future.'));
@@ -38,8 +38,8 @@ export const createAuction = async (req, res, next) => {
       title,
       description,
       itemImage,
-      startingPrice,
-      currentPrice: startingPrice,
+      basePrice,
+      currentPrice: basePrice,
       startTime,
       createdBy: userId,
       participants: [],

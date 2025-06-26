@@ -25,12 +25,12 @@ export function auctionStatusUpdater() {
 
         getIO().emit('auctionsUpdated');
       }
-
+      
       const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const auctionsToEnd = await Auction.find({
         status: 'active',
         startTime: { $lte: dayAgo },
-        $expr: { $eq: ['$currentPrice', '$startingPrice'] }
+        $expr: { $eq: ['$currentPrice', '$basePrice'] }
       });
 
       if (auctionsToEnd.length > 0) {

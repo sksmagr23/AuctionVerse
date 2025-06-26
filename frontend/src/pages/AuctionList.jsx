@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import auctionService from '../services/auction.service';
 import AuctionCard from '../components/AuctionCard';
 import { useSocket } from '../contexts/SocketContext';
+import Loader from '../components/Loader';
+import { FaBolt, FaClock, FaHistory } from 'react-icons/fa';
 
 const AuctionList = () => {
   const [auctions, setAuctions] = useState([]);
@@ -82,8 +84,8 @@ const AuctionList = () => {
       socket.off('bidPlaced');
     };
   }, [socket]);
-
-  if (loading) return <p>Loading auctions...</p>;
+  
+  if (loading) return <Loader message="Loading available auctions..." />;
   if (error) return <p className="text-red-500">{error}</p>;
 
   const liveAuctions = auctions.filter(a => a.status === 'active');
@@ -91,20 +93,24 @@ const AuctionList = () => {
   const pastAuctions = auctions.filter(a => a.status === 'ended');
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
+    <div className="bg-[#E5E5E5] min-h-screen pb-8">
+      <div className="flex justify-between items-center mb-6 px-4 pt-8">
         <div className="flex items-center space-x-4">
-          <h1 className="text-3xl font-bold">Auctions</h1>
+          <h1 className="text-3xl font-bold text-[#14213D]">Auctions</h1>
         </div>
         {updateNotification && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded animate-pulse">
+          <div className="bg-[#FCA311] border border-[#14213D] text-[#14213D] px-4 py-2 rounded shadow animate-pulse font-semibold">
             {updateNotification}
           </div>
         )}
       </div>
 
-      <div className="mb-10">
-        <h2 className="text-2xl font-semibold text-green-700 mb-4">Live Auctions</h2>
+      {/* Live Auctions */}
+      <div className="mb-10 px-4">
+        <div className="flex items-center mb-4">
+          <FaBolt className="text-green-600 text-xl mr-2" />
+          <h2 className="text-2xl font-semibold text-green-700">Live Auctions</h2>
+        </div>
         {liveAuctions.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {liveAuctions.map((auction) => (
@@ -116,8 +122,12 @@ const AuctionList = () => {
         )}
       </div>
 
-      <div className="mb-10">
-        <h2 className="text-2xl font-semibold text-yellow-600 mb-4">Upcoming Auctions</h2>
+      {/* Upcoming Auctions */}
+      <div className="mb-10 px-4">
+        <div className="flex items-center mb-4">
+          <FaClock className="text-yellow-500 text-xl mr-2" />
+          <h2 className="text-2xl font-semibold text-yellow-600">Upcoming Auctions</h2>
+        </div>
         {upcomingAuctions.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {upcomingAuctions.map((auction) => (
@@ -129,8 +139,12 @@ const AuctionList = () => {
         )}
       </div>
 
-      <div className="mb-10">
-        <h2 className="text-2xl font-semibold text-gray-500 mb-4">Past Auctions</h2>
+      {/* Past Auctions */}
+      <div className="mb-10 px-4">
+        <div className="flex items-center mb-4">
+          <FaHistory className="text-gray-500 text-xl mr-2" />
+          <h2 className="text-2xl font-semibold text-gray-500">Past Auctions</h2>
+        </div>
         {pastAuctions.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {pastAuctions.map((auction) => (
@@ -141,10 +155,6 @@ const AuctionList = () => {
           <div className="text-center text-gray-400">No past auctions</div>
         )}
       </div>
-
-      {auctions.length === 0 && (
-        <div className="text-center text-gray-500 text-lg mt-12">No auctions found.</div>
-      )}
     </div>
   );
 };

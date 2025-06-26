@@ -5,7 +5,7 @@ const auctionSchema = new mongoose.Schema(
     title: { type: String, required: true },
     description: { type: String },
     itemImage: { type: String },
-    startingPrice: { type: Number, required: true },
+    basePrice: { type: Number, required: true },
     currentPrice: { type: Number, required: true },
     startTime: { type: Date, required: true },
     createdBy: {

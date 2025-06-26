@@ -166,7 +166,7 @@ All protected endpoints require authentication via session cookies. After login/
   ```
   title: string (required)
   description: string (optional)
-  startingPrice: number (required)
+  basePrice: number (required)
   startTime: string (required, ISO format)
   itemImage: file (optional)
   ```
@@ -183,7 +183,7 @@ All protected endpoints require authentication via session cookies. After login/
       "title": "Vintage Watch",
       "description": "Beautiful vintage timepiece",
       "itemImage": "https://cloudinary.com/image.jpg",
-      "startingPrice": 100,
+      "basePrice": 100,
       "currentPrice": 100,
       "startTime": "2024-06-01T10:00:00.000Z",
       "createdBy": "user_id",
@@ -256,7 +256,7 @@ All protected endpoints require authentication via session cookies. After login/
       "title": "Vintage Watch",
       "description": "Beautiful vintage timepiece",
       "itemImage": "https://cloudinary.com/image.jpg",
-      "startingPrice": 100,
+      "basePrice": 100,
       "currentPrice": 250,
       "startTime": "2024-06-01T10:00:00.000Z",
       "createdBy": {
@@ -393,7 +393,7 @@ All protected endpoints require authentication via session cookies. After login/
   title: String (required),
   description: String,
   itemImage: String,
-  startingPrice: Number (required),
+  basePrice: Number (required),
   currentPrice: Number (required),
   startTime: Date (required),
   createdBy: ObjectId (ref: 'User', required),
