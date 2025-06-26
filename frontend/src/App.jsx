@@ -9,6 +9,7 @@ import CreateAuction from './pages/CreateAuction';
 import PrivateRoute from './components/PrivateRoute';
 import Profile from './pages/Profile';
 import AuctionList from './pages/AuctionList';
+import Lobby from './pages/Lobby';
 
 function App() {
   return (
@@ -32,6 +33,14 @@ function App() {
             element={
               <PrivateRoute>
                 <Profile />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="lobby/:id"
+            element={
+              <PrivateRoute>
+                <Lobby />
               </PrivateRoute>
             }
           />

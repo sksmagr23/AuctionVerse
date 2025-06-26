@@ -26,12 +26,22 @@ const endAuction = (id) => {
   return axios.post(`${API_URL}/${id}/end`);
 };
 
+const registerForAuction = (id) => {
+  return axios.post(`${API_URL}/${id}/register`);
+};
+
+const getRegisteredParticipants = (id) => {
+  return axios.get(`${API_URL}/${id}/registered-participants`);
+};
+
 const auctionService = {
   getAllAuctions,
   getAuction,
   createAuction,
   joinAuction,
   endAuction,
+  registerForAuction,
+  getRegisteredParticipants,
 };
 
 export default auctionService; 

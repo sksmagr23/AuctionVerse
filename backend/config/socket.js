@@ -1,4 +1,5 @@
 import { Server as SocketIOServer } from 'socket.io';
+import User from '../models/User.js';
 
 let io = null;
 
@@ -16,6 +17,36 @@ export const initSocket = (server) => {
     socket.on('joinAuction', (auctionId) => {
       socket.join(auctionId);
       socket.to(auctionId).emit('userJoined', { socketId: socket.id });
+    });
+
+    socket.on('joinLobby', async ({ auctionId, userId }) => {
+      try {
+        const user = await User.findById(userId);
+        if (user) {
+          socket.join(auctionId);
+          io.to(auctionId).emit('userJoinedLobby', {
+            userId,
+            username: user.username,
+          });
+        }
+      } catch (err) {
+        console.log('Error joining lobby:', err);
+      }
+    });
+
+    socket.on('leaveLobby', async ({ auctionId, userId }) => {
+      try {
+        const user = await User.findById(userId);
+        if (user) {
+          io.to(auctionId).emit('userLeftLobby', {
+            userId,
+            username: user.username,
+          });
+          socket.leave(auctionId);
+        }
+      } catch (err) {
+        console.log('Error leaving lobby:', err);
+      }
     });
 
     socket.on('newBid', ({ auctionId, bid }) => {

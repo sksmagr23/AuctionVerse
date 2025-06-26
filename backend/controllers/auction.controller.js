@@ -147,4 +147,45 @@ export const getAllAuctions = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+};
+
+export const registerForAuction = async (req, res, next) => {
+  try {
+    const { auctionId } = req.params;
+    const auction = await Auction.findById(auctionId);
+    if (!auction) return next(new ApiError(404, 'Auction not found'));
+
+    if (auction.status !== 'upcoming') {
+      return next(new ApiError(400, 'Registration is only allowed before the auction starts.'));
+    }
+    if (auction.createdBy.equals(req.user._id)) {
+      return next(new ApiError(403, 'Creator cannot register for their own auction.'));
+    }
+    if (auction.registeredParticipants.includes(req.user._id)) {
+      return res.json({ success: true, alreadyRegistered: true, auction });
+    }
+    
+    auction.registeredParticipants.push(req.user._id);
+    await auction.save();
+    getIO().to(auctionId).emit('participantRegistered', {
+      userId: req.user._id,
+      username: req.user.username,
+      auctionId,
+      registeredCount: auction.registeredParticipants.length
+    });
+    res.json({ success: true, auction });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getRegisteredParticipants = async (req, res, next) => {
+  try {
+    const { auctionId } = req.params;
+    const auction = await Auction.findById(auctionId).populate('registeredParticipants', 'username email profilePicture');
+    if (!auction) return next(new ApiError(404, 'Auction not found'));
+    res.json({ success: true, participants: auction.registeredParticipants });
+  } catch (err) {
+    next(err);
+  }
 }; 

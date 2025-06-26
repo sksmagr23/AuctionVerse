@@ -10,9 +10,9 @@ export const placeBid = async (req, res, next) => {
     const userId = req.user._id;
 
     const auction = await Auction.findById(auctionId);
-    if (!auction) return next(new ApiError('Auction not found', 404));
-    if (auction.status !== 'active') return next(new ApiError('Auction is not active', 400));
-    if (amount <= auction.currentPrice) return next(new ApiError('Bid must be higher than current price', 400));
+    if (!auction) return next(new ApiError(404, 'Auction not found'));
+    if (auction.status !== 'active') return next(new ApiError(400, 'Auction is not active'));
+    if (amount <= auction.currentPrice) return next(new ApiError(400, 'Bid must be higher than current price'));
 
     const bid = await Bid.create({
       auction: auctionId,

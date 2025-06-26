@@ -14,6 +14,7 @@ const auctionSchema = new mongoose.Schema(
       required: true,
     },
     participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    registeredParticipants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     status: {
       type: String,
       enum: ["active", "ended", "upcoming"],
