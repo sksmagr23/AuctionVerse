@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import auctionService from '../services/auction.service';
 import Button from '../components/Button';
+import FormInput from '../components/FormInput';
+import { FaGavel, FaTag, FaFileAlt, FaRupeeSign, FaClock, FaImage } from 'react-icons/fa';
+import { RiAuctionFill } from "react-icons/ri";
+import { useSnackbar } from 'notistack';
 
 const CreateAuction = () => {
   const [title, setTitle] = useState('');
@@ -10,10 +14,10 @@ const CreateAuction = () => {
   const [startTime, setStartTime] = useState('');
   const [itemImage, setItemImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [error, setError] = useState('');
   const [minTime, setMinTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { enqueueSnackbar } = useSnackbar();
 
   useEffect(() => {
     const now = new Date();
@@ -23,6 +27,13 @@ const CreateAuction = () => {
     const hours = now.getHours().toString().padStart(2, '0');
     const minutes = now.getMinutes().toString().padStart(2, '0');
     setMinTime(`${year}-${month}-${day}T${hours}:${minutes}`);
+
+    document.querySelectorAll('.animate-on-load').forEach((el, i) => {
+      setTimeout(() => {
+        el.classList.remove('opacity-0');
+        el.classList.remove('translate-y-2');
+      }, 100 * i);
+    });
   }, []);
 
   const handleImageChange = (e) => {
@@ -39,7 +50,6 @@ const CreateAuction = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setIsSubmitting(true);
 
     const formData = new FormData();
@@ -54,64 +64,152 @@ const CreateAuction = () => {
     try {
       const response = await auctionService.createAuction(formData);
       if (response.data.success) {
+        enqueueSnackbar('Auction scheduled successfully!', {
+          variant: 'success',
+          preventDuplicate: true
+        });
         navigate(`/auction/${response.data.auction._id}`);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not create auction.');
+      const errorMessage = err.response?.data?.message || 'Could not create auction.';
+      enqueueSnackbar(errorMessage, {
+        variant: 'error',
+        preventDuplicate: true
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto mt-10">
-      <form onSubmit={handleSubmit} className="bg-white shadow-xl rounded-2xl border-2 border-[#FCA311]">
-        <div className="bg-[#FCA311] rounded-t-2xl px-8 py-5 flex items-center gap-3">
-          <img src="/auction.png" className="h-8 w-8" alt="Auction" />
-          <h2 className="text-2xl font-extrabold text-[#14213D]">Create a New Auction</h2>
+    <div className="min-h-auto flex items-start justify-center bg-gradient-to-b from-[#fac311] to-transparent px-4 py-12 relative overflow-hidden">
+      <div className="w-full max-w-2xl relative z-10">
+        <div className="text-center mb-6 animate-on-load opacity-0 translate-y-2 transition-all duration-500">
+          <span className="text-3xl md:text-4xl font-bold text-[#14213D] justify-center items-center gap-1 flex mb-3"> <RiAuctionFill className='w-7 h-7 md:w-8 md:h-8' /> Host an Auction</span>
+          <p className="text-gray-900 text-md md:text-lg">Create a new auction and start receiving bids</p>
         </div>
-        <div className="px-8 pt-6 pb-8">
-          {error && <p className="bg-red-100 border border-red-300 text-red-700 text-sm rounded px-4 py-2 mb-4">{error}</p>}
 
-          <div className="mb-4">
-            <label className="block text-[#14213D] text-sm font-bold mb-2" htmlFor="title">Title</label>
-            <input type="text" id="title" value={title} onChange={(e) => setTitle(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#FCA311] focus:ring-2 focus:ring-[#FCA311]/20 transition-all duration-200" />
-          </div>
+        <div className="bg-gradient-to-b to-[#f5f1f1] from-white rounded-sm border-2 border-[#000] shadow-[12px_12px_0px_#000] p-6 transition-all duration-200 animate-on-load opacity-0 translate-y-2 mb-10" style={{ transitionDelay: '100ms' }}>
 
-          <div className="mb-4">
-            <label className="block text-[#14213D] text-sm font-bold mb-2" htmlFor="description">Description</label>
-            <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#FCA311] focus:ring-2 focus:ring-[#FCA311]/20 transition-all duration-200" rows={3}></textarea>
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <FormInput
+              id="title"
+              type="text"
+              label="Auction Title"
+              icon={<FaTag />}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter a catchy title for your auction"
+              required
+              disabled={isSubmitting}
+              style={{ transitionDelay: '100ms' }}
+            />
 
-          <div className="mb-4">
-            <label className="block text-[#14213D] text-sm font-bold mb-2" htmlFor="basePrice">Base Price ($)</label>
-            <input type="number" id="basePrice" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#FCA311] focus:ring-2 focus:ring-[#FCA311]/20 transition-all duration-200" />
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-[#14213D] text-sm font-bold mb-2" htmlFor="startTime">Start Time</label>
-            <input type="datetime-local" id="startTime" value={startTime} min={minTime} onChange={(e) => setStartTime(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#FCA311] focus:ring-2 focus:ring-[#FCA311]/20 transition-all duration-200" />
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-[#14213D] text-sm font-bold mb-2" htmlFor="itemImage">Item Image</label>
-            <input type="file" id="itemImage" accept="image/*" onChange={handleImageChange} className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#FCA311] focus:ring-2 focus:ring-[#FCA311]/20 transition-all duration-200" />
-            {imagePreview && (
-              <div className="mt-3 flex justify-center">
-                <img src={imagePreview} alt="Preview" className="h-32 rounded-lg border border-gray-200 shadow" />
+            <div className="animate-on-load opacity-0 translate-y-2 transition-all duration-200" style={{ transitionDelay: '200ms' }}>
+              <div className="flex items-center mb-2">
+                <span className="mr-2 text-[#FCA311]"><FaFileAlt /></span>
+                <label className="text-[#14213D] text-sm font-bold" htmlFor="description">
+                  Description
+                </label>
               </div>
-            )}
-          </div>
+              <div className="relative">
+                <textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe your item in detail"
+                  className="w-full px-3 py-2.5 rounded-sm border border-[#2e2e2ee9] shadow-[3px_0px_3px_#2e2e2ee9] focus:outline-none focus:shadow-[3px_0px_3px_#fca311] focus:border-[#FCA311] focus:ring-2 focus:ring-[#FCA311]/20 transition-all duration-200"
+                  rows={4}
+                  disabled={isSubmitting}
+                ></textarea>
+              </div>
+            </div>
 
-          <div className="flex items-center justify-center">
-            <Button type="submit" variant="primary" className="w-full text-lg py-3" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating...' : 'Create Auction'}
-            </Button>
-          </div>
+            <FormInput
+              id="basePrice"
+              type="number"
+              label="Base Price"
+              icon={<FaRupeeSign />}
+              value={basePrice}
+              onChange={(e) => setBasePrice(e.target.value)}
+              placeholder="Set your starting bid amount"
+              required
+              disabled={isSubmitting}
+              style={{ transitionDelay: '300ms' }}
+            />
+
+            <FormInput
+              id="startTime"
+              type="datetime-local"
+              label="Auction Start Time"
+              icon={<FaClock />}
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              min={minTime}
+              required
+              disabled={isSubmitting}
+              style={{ transitionDelay: '400ms' }}
+            />
+
+            <div className="animate-on-load opacity-0 translate-y-2 transition-all duration-200" style={{ transitionDelay: '500ms' }}>
+              <div className="flex items-center mb-2">
+                <span className="mr-2 text-[#FCA311]"><FaImage /></span>
+                <label className="text-[#14213D] text-sm font-bold" htmlFor="itemImage">
+                  Item Image
+                </label>
+              </div>
+
+              <div className="border-2 border-dashed border-gray-500 rounded-lg p-6 transition-all hover:border-[#FCA311]">
+                <input
+                  type="file"
+                  id="itemImage"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  disabled={isSubmitting}
+                />
+                <label
+                  htmlFor="itemImage"
+                  className="flex flex-col items-center justify-center cursor-pointer"
+                >
+                  {imagePreview ? (
+                    <div className="relative w-full">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="mx-auto h-48 object-contain rounded-md"
+                      />
+                      
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-6">
+                      <FaImage className="w-12 h-12 text-[#fca311] mb-3" />
+                      <p className="mb-2 text-sm text-[#222]">
+                        <span className="font-semibold">Click to upload</span> or drag and drop
+                      </p>
+                      <p className="text-xs text-[#222]">PNG, JPG, SVG</p>
+                    </div>
+                  )}
+                </label>
+              </div>
+            </div>
+
+            <div className="animate-on-load opacity-0 translate-y-2 transition-all duration-200" style={{ transitionDelay: '600ms' }}>
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full"
+                disabled={isSubmitting}
+                icon={<FaGavel />}
+              >
+                {isSubmitting ? 'Creating Auction...' : 'Create Auction'}
+              </Button>
+            </div>
+          </form>
         </div>
-      </form>
+      </div>
     </div>
   );
 };
 
-export default CreateAuction; 
+export default CreateAuction;

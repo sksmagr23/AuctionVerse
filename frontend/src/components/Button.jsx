@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import classNames from 'classnames';
 
@@ -10,6 +9,8 @@ const Button = ({
   type = 'button',
   disabled = false,
   variant = 'primary',
+  icon = null,
+  iconPosition = 'left',
   ...props
 }) => {
   const Comp = to ? Link : 'button';
@@ -36,8 +37,8 @@ const Button = ({
         };  
       case 'success':
         return {
-          base: 'text-white bg-green-500 border-black shadow-[5px_5px_0px_#fff]',
-          hover: 'hover:bg-white hover:text-green-500 hover:border-green-500 hover:shadow-[5px_5px_0px_#22c55e]',
+          base: 'text-white bg-green-600 border-black shadow-[5px_5px_0px_#000]',
+          hover: 'hover:bg-white hover:text-green-600 hover:border-green-600 hover:shadow-[5px_5px_0px_#22c55e]',
           active: 'active:bg-green-100 active:text-green-600'
         };
       case 'warning':
@@ -57,13 +58,11 @@ const Button = ({
 
   const variantClasses = getVariantClasses();
   
-  const baseClasses = `inline-block px-2 sm:px-3.5 py-1 sm:py-1.5 font-bold text-center no-underline border-2 rounded-sm transition-all duration-300 ease-in-out cursor-pointer ${variantClasses.base}`;
+  const baseClasses = `inline-flex items-center justify-center gap-2 px-1.5 sm:px-3.5 py-1 sm:py-1.5 font-bold text-center no-underline border-2 rounded-sm transition-all duration-300 ease-in-out cursor-pointer ${variantClasses.base}`;
   
-  const hoverClasses = variantClasses.hover;
-  
-  const activeClasses = `${variantClasses.active} active:shadow-none active:translate-y-1`;
-  
-  const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : '';
+  const hoverClasses = !disabled ? variantClasses.hover : '';
+  const activeClasses = !disabled ? `${variantClasses.active} active:shadow-none active:translate-y-1` : '';
+  const disabledClasses = disabled ? 'opacity-55 cursor-not-allowed pointer-events-none' : '';
 
   return (
     <Comp
@@ -80,7 +79,13 @@ const Button = ({
       )}
       {...props}
     >
+      {icon && iconPosition === 'left' && (
+        <span className="inline-block">{icon}</span>
+      )}
       {children}
+      {icon && iconPosition === 'right' && (
+        <span className="inline-block">{icon}</span>
+      )}
     </Comp>
   );
 };

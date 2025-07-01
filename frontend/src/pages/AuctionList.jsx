@@ -1,76 +1,116 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import auctionService from '../services/auction.service';
 import AuctionCard from '../components/AuctionCard';
 import { useSocket } from '../contexts/SocketContext';
 import Loader from '../components/Loader';
-import { FaBolt, FaClock, FaHistory } from 'react-icons/fa';
+import Button from '../components/Button';
+import { useSnackbar } from 'notistack';
+import {
+  FaClock,
+  FaHistory,
+  FaGavel,
+  FaPlus,
+  FaSync,
+  FaFlagCheckered,
+  FaExclamation
+} from 'react-icons/fa';
+import { useAuth } from '../contexts/AuthContext';
 
 const AuctionList = () => {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [updateNotification, setUpdateNotification] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   const socket = useSocket();
+  const { enqueueSnackbar } = useSnackbar();
+  const { isAuthenticated } = useAuth();
+
+  const showNotification = (message, variant, icon) => {
+    enqueueSnackbar(
+      <div className="flex items-center">
+        {icon}
+        <span className="ml-2">{message}</span>
+      </div>,
+      {
+        variant,
+        preventDuplicate: true,
+        autoHideDuration: 3000
+      }
+    );
+  };
 
   const fetchAuctions = async () => {
     try {
+      setRefreshing(true);
       const response = await auctionService.getAllAuctions();
       if (response.data.success) {
         setAuctions(response.data.auctions);
       }
-    } catch (err) {
-      setError(err);
+    } catch {
+      showNotification(
+        'Failed to load auctions',
+        'error',
+        <FaExclamation className="text-white" />
+      );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const showUpdateNotification = (message) => {
-    setUpdateNotification(message);
-    setTimeout(() => setUpdateNotification(''), 3000);
-  };
-
   useEffect(() => {
+    fetchAuctions()
+  }, [])
+
+  const handleRefresh = () => {
     fetchAuctions();
-  }, []);
+  };
 
   useEffect(() => {
     if (!socket) return;
 
     socket.on('auctionsUpdated', () => {
-      showUpdateNotification('🔄 Auctions updated');
+      showNotification(
+        'Auctions updated with latest data',
+        'info',
+        <FaSync className="text-blue-100" />
+      );
       fetchAuctions();
     });
+
     socket.on('auctionCreated', (newAuction) => {
-      showUpdateNotification('🆕 New auction created');
+      showNotification(
+        'New auction has been created',
+        'success',
+        <FaPlus className="text-orange-100" />
+      );
       setAuctions(prev => [newAuction, ...prev]);
     });
+
     socket.on('auctionStarted', (data) => {
-      showUpdateNotification('🚀 Auction started');
-      setAuctions(prev => 
-        prev.map(auction => 
-          auction._id === data.auctionId 
+      showNotification(
+        'An auction has just gone live!',
+        'success',
+        <FaFlagCheckered className="text-yellow-100" />
+      );
+      setAuctions(prev =>
+        prev.map(auction =>
+          auction._id === data.auctionId
             ? { ...auction, status: 'active' }
             : auction
         )
       );
     });
+
     socket.on('auctionEnded', (data) => {
-      showUpdateNotification('🏁 Auction ended');
-      setAuctions(prev => 
-        prev.map(auction => 
-          auction._id === data.auctionId 
-            ? { ...auction, status: 'ended', winner: data.winner, winningBid: data.winningBid }
-            : auction
-        )
+      showNotification(
+        'An auction has ended',
+        'info',
+        <FaHistory className="text-blue-100" />
       );
-    });
-    socket.on('bidPlaced', (data) => {
-      showUpdateNotification('💰 New bid placed');
-      setAuctions(prev => 
-        prev.map(auction => 
-          auction._id === data.bid.auction 
-            ? { ...auction, currentPrice: data.currentPrice }
+      setAuctions(prev =>
+        prev.map(auction =>
+          auction._id === data.auctionId
+            ? { ...auction, status: 'ended', winner: data.winner, winningBid: data.winningBid }
             : auction
         )
       );
@@ -81,82 +121,150 @@ const AuctionList = () => {
       socket.off('auctionCreated');
       socket.off('auctionStarted');
       socket.off('auctionEnded');
-      socket.off('bidPlaced');
     };
-  }, [socket]);
-  
+  }, [socket, enqueueSnackbar]);
+
   if (loading) return <Loader message="Loading available auctions..." />;
-  if (error) return <p className="text-red-500">{error}</p>;
 
   const liveAuctions = auctions.filter(a => a.status === 'active');
   const upcomingAuctions = auctions.filter(a => a.status === 'upcoming');
   const pastAuctions = auctions.filter(a => a.status === 'ended');
 
+  const EmptyState = ({ message, icon, color }) => (
+    <div className="bg-white rounded-sm border-2 border-gray-200 p-6 text-center flex flex-col items-center justify-center">
+      <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 ${color}`}>
+        {icon}
+      </div>
+      <p className="text-gray-600">{message}</p>
+    </div>
+  );
+
+  const SectionHeader = ({ icon, title, color }) => (
+    <div className="flex items-center mb-6 border-b-2 border-[#eaa911] pb-2">
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${color}`}>
+        {icon}
+      </div>
+      <h2 className={`text-2xl font-bold text-gray-800`}>
+        {title}
+      </h2>
+    </div>
+  );
+
   return (
-    <div className="bg-[#E5E5E5] min-h-screen pb-8">
-      <div className="flex justify-between items-center mb-6 px-4 pt-8">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-3xl font-bold text-[#14213D]">Auctions</h1>
-        </div>
-        {updateNotification && (
-          <div className="bg-[#FCA311] border border-[#14213D] text-[#14213D] px-4 py-2 rounded shadow animate-pulse font-semibold">
-            {updateNotification}
+    <div className="min-h-screen pb-16 bg-gradient-to-b to-white from-transparent">
+      <div className="bg-[#FCA311] py-4 mb-6 shadow-2xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-[#14213D] flex items-center">
+                <FaGavel className="mr-3 text-2xl md:text-3xl" />
+                Auctions Marketplace
+              </h1>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              {isAuthenticated && (
+                <Button
+                  to="/auctions/new"
+                  variant="secondary"
+                  icon={<FaPlus />}
+                >
+                  Host Auction
+                </Button>
+              )}
+
+              <Button
+                onClick={handleRefresh}
+                variant="primary"
+                disabled={refreshing}
+                icon={<FaSync className={refreshing ? "animate-spin" : ""} />}
+              >
+                {refreshing ? "Refreshing..." : "Refresh"}
+              </Button>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Live Auctions */}
-      <div className="mb-10 px-4">
-        <div className="flex items-center mb-4">
-          <FaBolt className="text-green-600 text-xl mr-2" />
-          <h2 className="text-2xl font-semibold text-green-700">Live Auctions</h2>
-        </div>
-        {liveAuctions.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {liveAuctions.map((auction) => (
-              <AuctionCard key={auction._id} auction={auction} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-gray-400">No live auctions</div>
-        )}
-      </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-      {/* Upcoming Auctions */}
-      <div className="mb-10 px-4">
-        <div className="flex items-center mb-4">
-          <FaClock className="text-yellow-500 text-xl mr-2" />
-          <h2 className="text-2xl font-semibold text-yellow-600">Upcoming Auctions</h2>
-        </div>
-        {upcomingAuctions.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {upcomingAuctions.map((auction) => (
-              <AuctionCard key={auction._id} auction={auction} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-gray-400">No upcoming auctions</div>
-        )}
-      </div>
+        <section className="mb-12">
+          <SectionHeader
+            icon={<FaFlagCheckered className="text-white text-lg" />}
+            title="Live Auctions"
+            color="bg-green-500 text-green-500"
+            count={liveAuctions.length}
+          />
 
-      {/* Past Auctions */}
-      <div className="mb-10 px-4">
-        <div className="flex items-center mb-4">
-          <FaHistory className="text-gray-500 text-xl mr-2" />
-          <h2 className="text-2xl font-semibold text-gray-500">Past Auctions</h2>
-        </div>
-        {pastAuctions.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {pastAuctions.map((auction) => (
-              <AuctionCard key={auction._id} auction={auction} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-gray-400">No past auctions</div>
-        )}
+          {liveAuctions.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {liveAuctions.map((auction) => (
+                <div key={auction._id} className="transform transition-all duration-300 hover:-translate-y-1">
+                  <AuctionCard auction={auction} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              message="No live auctions at the moment. Register for an upcoming auction"
+              icon={<FaFlagCheckered className="text-white text-xl" />}
+              color="bg-green-500"
+            />
+          )}
+        </section>
+
+        <section className="mb-12">
+          <SectionHeader
+            icon={<FaClock className="text-white text-lg" />}
+            title="Upcoming Auctions"
+            color="bg-[#FCA311] text-[#FCA311]"
+            count={upcomingAuctions.length}
+          />
+
+          {upcomingAuctions.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {upcomingAuctions.map((auction) => (
+                <div key={auction._id} className="transform transition-all duration-300 hover:-translate-y-1">
+                  <AuctionCard auction={auction} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              message="No upcoming auctions scheduled yet. Why not host one yourself?"
+              icon={<FaClock className="text-white text-xl" />}
+              color="bg-[#FCA311]"
+            />
+          )}
+        </section>
+
+        <section className="mb-12">
+          <SectionHeader
+            icon={<FaHistory className="text-white text-lg" />}
+            title="Past Auctions"
+            color="bg-gray-500 text-gray-500"
+            count={pastAuctions.length}
+          />
+
+          {pastAuctions.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {pastAuctions.map((auction) => (
+                <div key={auction._id} className="transform transition-all duration-300 hover:-translate-y-1">
+                  <AuctionCard auction={auction} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              message="No past auctions found."
+              icon={<FaHistory className="text-white text-xl" />}
+              color="bg-gray-500"
+            />
+          )}
+        </section>
       </div>
     </div>
   );
 };
 
-export default AuctionList; 
+export default AuctionList;

@@ -1,44 +1,70 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
 import authService from '../services/auth.service';
 import { formatToIST } from '../utils/formatDate';
-import { FaTrophy, FaPaintBrush, FaDollarSign, FaCalendarAlt } from 'react-icons/fa';
+import { useSnackbar } from 'notistack';
+import Button from '../components/Button';
+import Loader from '../components/Loader';
+import {
+  FaTrophy,
+  FaRupeeSign,
+  FaCalendarAlt,
+  FaGavel,
+  FaUser,
+  FaHistory,
+  FaSync,
+  FaTag,
+  FaStar
+} from 'react-icons/fa';
 
 const CompactAuctionCard = ({ auction, wonAmount }) => {
   const statusColor = {
-    active: 'bg-green-100 text-green-700',
-    upcoming: 'bg-yellow-100 text-yellow-700',
-    ended: 'bg-red-100 text-red-700',
+    active: 'bg-green-100 text-green-700 border-green-300',
+    upcoming: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+    ended: 'bg-gray-100 text-gray-700 border-gray-300',
   };
+
   return (
-    <Link to={`/auction/${auction._id || auction.auction?._id || auction.auction}`}
-      className="block group border border-gray-200 rounded-lg px-4 py-3 bg-white hover:shadow-lg transition-all">
+    <Link
+      to={`/auction/${auction._id || auction.auction?._id || auction.auction}`}
+      className="block border-2 border-gray-200 rounded-sm px-4 py-3 bg-white hover:shadow-[5px_5px_0px_#fca311] hover:border-[#fca311] transition-all duration-200"
+    >
       <div className="flex justify-between items-center">
-        <div>
+        <div className="flex-1 min-w-0">
           <div className="font-semibold text-[#14213D] truncate">
             {auction.title || auction.auction?.title || 'Auction'}
           </div>
-          <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-            <FaCalendarAlt className="inline-block mr-1 text-[#FCA311]" />
-            {formatToIST(auction.startTime || auction.auction?.startTime)}
+          <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+            <FaCalendarAlt className="text-[#FCA311]" />
+            <span>{formatToIST(auction.startTime || auction.auction?.startTime)}</span>
           </div>
         </div>
-        <div className="text-right">
+
+        <div className="text-right pl-4">
           {wonAmount !== undefined ? (
             <div>
-              <span className="font-bold text-green-600 text-lg">${wonAmount.toLocaleString()}</span>
+              <span className="font-bold text-green-600 text-lg flex items-center justify-end">
+                <FaRupeeSign className="text-sm" />
+                {wonAmount.toLocaleString()}
+              </span>
               <div className="text-xs text-gray-500 mt-1">Winning Bid</div>
             </div>
           ) : (
             <>
-              <span className="font-bold text-green-600 text-lg">${auction.currentPrice?.toLocaleString?.() || 0}</span>
-              <div className="text-xs text-gray-500 mt-1">Current</div>
+              <span className="font-bold text-[#FCA311] text-lg flex items-center justify-end">
+                <FaRupeeSign className="text-sm" />
+                {auction.currentPrice?.toLocaleString?.() || auction.basePrice?.toLocaleString?.() || 0}
+              </span>
+              <div className="text-xs text-gray-500 mt-1">
+                {auction.status === 'active' ? 'Current Price' : 'Base Price'}
+              </div>
             </>
           )}
+
           {auction.status && (
-            <div className={`mt-1 px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor[auction.status] || 'bg-gray-100 text-gray-600'}`}>
+            <div className={`mt-1 px-2 py-0.5 rounded-full text-xs font-medium border ${statusColor[auction.status] || 'bg-gray-100 text-gray-600 border-gray-300'}`}>
               {auction.status.charAt(0).toUpperCase() + auction.status.slice(1)}
             </div>
           )}
@@ -48,181 +74,264 @@ const CompactAuctionCard = ({ auction, wonAmount }) => {
   );
 };
 
+const EmptyState = ({ icon, title, message, action }) => (
+  <div className="text-center py-4">
+    <div className="text-6xl mb-2 text-gray-300">{icon}</div>
+    <p className="text-gray-800 font-bold text-lg">{title}</p>
+    <p className="text-gray-500 text-sm mt-2 mb-4">{message}</p>
+    {action}
+  </div>
+);
+
+const ProfileSection = ({ title, icon, count, colorClass, children }) => (
+  <div className={`bg-white p-4 rounded-sm border-2 border-[#000] shadow-[8px_8px_0px_#000] mb-4`}>
+    <h3 className={`text-xl font-bold mb-4 flex items-center ${colorClass}`}>
+      {icon}
+      <span className="ml-2">{title}</span>
+      {count > 0 && (
+        <span className={`ml-2 ${colorClass} text-sm font-medium px-2.5 py-0.5 rounded-full border`}>
+          {count}
+        </span>
+      )}
+    </h3>
+    {children}
+  </div>
+);
+
 const Profile = () => {
   const { user, login } = useAuth();
   const socket = useSocket();
-  const [updateNotification, setUpdateNotification] = useState('');
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
 
-  const showUpdateNotification = (message) => {
-    setUpdateNotification(message);
-    setTimeout(() => setUpdateNotification(''), 5000);
-  };
-
-  const refreshUserData = async () => {
+  const loadInitialUserData = async () => {
     try {
-      setIsUpdating(true);
       const res = await authService.getUserProfile();
       if (res.data.success) {
         login(res.data.user);
       }
     } catch (err) {
-      console.log('Error fetching user data:', err);
+      console.error('Error fetching initial user data:', err);
     } finally {
-      setIsUpdating(false);
+      setLoading(false);
+    }
+  };
+
+  const refreshUserData = async () => {
+    try {
+      setRefreshing(true);
+      const res = await authService.getUserProfile();
+      if (res.data.success) {
+        login(res.data.user);
+        enqueueSnackbar('Profile updated successfully', {
+          variant: 'success',
+        });
+      }
+    } catch (err) {
+      console.error('Error refreshing user data:', err);
+      enqueueSnackbar('Failed to update profile', {
+        variant: 'error',
+      });
+    } finally {
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    refreshUserData();
+    loadInitialUserData();
   }, []);
 
   useEffect(() => {
     if (!socket) return;
 
     const handleAuctionEnded = async (data) => {
-      try {
-        if (data.winner && data.winner === user?._id) {
-          showUpdateNotification('🎉 Congratulations! You won an auction!');
-          await refreshUserData();
-        } else if (data.winner) {
-          showUpdateNotification('🏁 An auction you participated in has ended');
-          await refreshUserData();
-        } else {
-          showUpdateNotification('🏁 An auction has ended with no winner');
-          await refreshUserData();
-        }
-      } catch (err) {
-        console.log('Error handling auction ended:', err);
+      if (data.winner && data.winner === user?._id) {
+        enqueueSnackbar('🏆 Congratulations! You won an auction!', {
+          variant: 'success',
+        });
       }
     };
 
-    const handleAuctionCreated = () => {
-      showUpdateNotification('🆕 A new auction has been created');
-    };
-
-    const handleAuctionStarted = () => {
-      showUpdateNotification('🚀 An auction has started');
-    };
-
-    const handleBidPlaced = () => {
-      showUpdateNotification('💰 A new bid was placed');
-    };
-
     socket.on('auctionEnded', handleAuctionEnded);
-    socket.on('auctionCreated', handleAuctionCreated);
-    socket.on('auctionStarted', handleAuctionStarted);
-    socket.on('bidPlaced', handleBidPlaced);
 
     return () => {
       socket.off('auctionEnded', handleAuctionEnded);
-      socket.off('auctionCreated', handleAuctionCreated);
-      socket.off('auctionStarted', handleAuctionStarted);
-      socket.off('bidPlaced', handleBidPlaced);
     };
-  }, [socket, user?._id, login]);
+  }, [socket, user?._id, enqueueSnackbar]);
+
+  if (loading) return <Loader message="Loading your profile..." />;
 
   if (!user) {
-    return <p className="text-center mt-8">You must be logged in to view your profile.</p>;
+    return (
+      <div className="max-w-md mx-auto my-12 p-8 bg-white rounded-sm border-2 border-[#000] shadow-[8px_8px_0px_#000]">
+        <h2 className="text-2xl font-bold text-center mb-6">Authentication Required</h2>
+        <p className="text-gray-600 mb-8 text-center">You must be logged in to view your profile</p>
+        <div className="flex justify-center gap-4">
+          <Button to="/login" variant="primary" icon={<FaUser />}>Log In</Button>
+          <Button to="/register" variant="secondary">Sign Up</Button>
+        </div>
+      </div>
+    );
   }
 
+  const totalSpent = user.wonAuctions
+    ? user.wonAuctions.reduce((total, won) => total + won.amount, 0)
+    : 0;
+
   return (
-    <div className="max-w-2xl mx-auto bg-white shadow-md rounded-2xl p-8 mt-8">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-6">
-        <div className="flex items-center gap-6">
-          <img
-            src={user.profilePicture || '/avatar.png'}
-            alt={user.username}
-            className="w-28 h-28 rounded-full object-cover border-4 border-[#FCA311] shadow"
-          />
+    <div className="min-h-screen bg-gradient-to-b from-[#fca311] to-transparent py-8 px-4">
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-gradient-to-r from-white to-gray-100 rounded-sm border-2 border-[#000] shadow-[8px_8px_0px_#000] p-6 mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex flex-col md:flex-row items-center gap-6 w-full">
+              <div className="relative">
+                <img
+                  src={user.profilePicture || '/avatar.png'}
+                  alt={user.username}
+                  className="w-28 h-28 rounded-full object-cover border-4 border-[#FCA311] shadow"
+                />
+              </div>
+
+              <div className="text-center md:text-left flex-1">
+                <h2 className="text-3xl font-extrabold text-[#14213D]">
+                  {user.username}
+                </h2>
+                <p className="text-gray-600">{user.email}</p>
+                <p className="text-sm text-gray-500 mt-1 mb-4 md:mb-0">
+                  Member since {new Date(user.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+
+              <Button
+                onClick={refreshUserData}
+                variant="secondary"
+                disabled={refreshing}
+                icon={<FaSync className={refreshing ? "animate-spin" : ""} />}
+              >
+                {refreshing ? "Updating..." : "Refresh"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+            <div className="bg-white p-3 rounded-sm border-2 border-[#14213D]/20 shadow text-center">
+              <FaTrophy className="text-2xl text-[#FCA311] mx-auto mb-1" />
+              <div className="text-2xl font-bold text-[#14213D]">
+                {user.wonAuctions ? user.wonAuctions.length : 0}
+              </div>
+              <div className="text-sm text-gray-600">Auctions Won</div>
+            </div>
+
+            <div className="bg-white p-3 rounded-sm border-2 border-[#14213D]/20 shadow text-center">
+              <FaRupeeSign className="text-2xl text-[#FCA311] mx-auto mb-1" />
+              <div className="text-2xl font-bold text-[#14213D]">
+                {totalSpent.toLocaleString()}
+              </div>
+              <div className="text-sm text-gray-600">Total Spent</div>
+            </div>
+
+            <div className="bg-white p-3 rounded-sm border-2 border-[#14213D]/20 shadow text-center">
+              <FaGavel className="text-2xl text-[#FCA311] mx-auto mb-1" />
+              <div className="text-2xl font-bold text-[#14213D]">
+                {user.createdAuctions ? user.createdAuctions.length : 0}
+              </div>
+              <div className="text-sm text-gray-600">Auctions Created</div>
+            </div>
+
+            <div className="bg-white p-3 rounded-sm border-2 border-[#14213D]/20 shadow text-center">
+              <FaHistory className="text-2xl text-[#FCA311] mx-auto mb-1" />
+              <div className="text-2xl font-bold text-[#14213D]">
+                {user.participatedAuctions ? user.participatedAuctions.length : 0}
+              </div>
+              <div className="text-sm text-gray-600">Participated</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>
-            <h2 className="text-3xl font-extrabold text-[#14213D]">{user.username}</h2>
-            <p className="text-gray-600 text-lg">{user.email}</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Member since {new Date(user.createdAt).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-        {isUpdating && (
-          <div className="flex items-center space-x-2">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#FCA311]"></div>
-            <span className="text-sm text-[#FCA311]">Updating...</span>
-          </div>
-        )}
-      </div>
-
-      {updateNotification && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6 animate-pulse">
-          {updateNotification}
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="bg-blue-50 p-4 rounded-lg text-center flex flex-col items-center">
-          <FaTrophy className="text-2xl text-blue-500 mb-1" />
-          <div className="text-2xl font-bold text-blue-600">
-            {user.wonAuctions ? user.wonAuctions.length : 0}
-          </div>
-          <div className="text-sm text-blue-600">Auctions Won</div>
-        </div>
-        <div className="bg-green-50 p-4 rounded-lg text-center flex flex-col items-center">
-          <FaDollarSign className="text-2xl text-green-500 mb-1" />
-          <div className="text-2xl font-bold text-green-600">
-            ${user.wonAuctions ? user.wonAuctions.reduce((total, won) => total + won.amount, 0).toLocaleString() : '0'}
-          </div>
-          <div className="text-sm text-green-600">Total Spent</div>
-        </div>
-      </div>
-
-      <div className="bg-gray-50 p-6 rounded-lg mb-8">
-        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <FaTrophy className="text-yellow-500" /> Auctions Won
-          {user.wonAuctions && user.wonAuctions.length > 0 && (
-            <span className="ml-2 bg-green-100 text-green-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
-              {user.wonAuctions.length}
-            </span>
-          )}
-        </h3>
-        {user.wonAuctions && user.wonAuctions.length > 0 ? (
-          <div className="space-y-2">
-            {user.wonAuctions.map((won, idx) => (
-              <CompactAuctionCard key={idx} auction={won.auction} wonAmount={won.amount} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <div className="text-6xl mb-4">🏆</div>
-            <p className="text-gray-500 text-lg">You haven't won any auctions yet.</p>
-            <p className="text-gray-400 text-sm mt-2">
-              Start bidding on active auctions to win!
-            </p>
-            <Link 
-              to="/" 
-              className="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            <ProfileSection
+              title="Auctions Won"
+              icon={<FaTrophy className="text-yellow-500" />}
+              count={user.wonAuctions?.length || 0}
+              colorClass="text-yellow-600"
             >
-              Browse Auctions
-            </Link>
-          </div>
-        )}
-      </div>
+              {user.wonAuctions && user.wonAuctions.length > 0 ? (
+                <div className="space-y-2">
+                  {user.wonAuctions.map((won, idx) => (
+                    <CompactAuctionCard key={idx} auction={won.auction} wonAmount={won.amount} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={<FaTrophy />}
+                  title="No Won Auctions Yet"
+                  message="Start bidding on active auctions to win!"
+                  action={
+                    <Button to="/auctions" variant="primary" icon={<FaGavel />}>
+                      Find Auctions
+                    </Button>
+                  }
+                />
+              )}
+            </ProfileSection>
 
-      {user.createdAuctions && user.createdAuctions.length > 0 && (
-        <div className="bg-purple-50 p-6 rounded-lg mb-6">
-          <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <FaPaintBrush className="text-purple-500" /> Created Auctions
-            <span className="ml-2 bg-purple-100 text-purple-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
-              {user.createdAuctions.length}
-            </span>
-          </h3>
-          <div className="space-y-2">
-            {user.createdAuctions.map((auction, idx) => (
-              <CompactAuctionCard key={idx} auction={auction} />
-            ))}
+            {user.participatedAuctions && user.participatedAuctions.length > 0 && (
+              <ProfileSection
+                title="Recently Participated"
+                icon={<FaStar className="text-blue-500" />}
+                count={user.participatedAuctions.length}
+                colorClass="text-blue-600"
+              >
+                <div className="space-y-2">
+                  {user.participatedAuctions.slice(0, 5).map((auction, idx) => (
+                    <CompactAuctionCard key={idx} auction={auction} />
+                  ))}
+
+                  {user.participatedAuctions.length > 5 && (
+                    <div className="text-center mt-4">
+                      <Button to="/auctions" variant="secondary" icon={<FaHistory />}>
+                        View All {user.participatedAuctions.length} Participated Auctions
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </ProfileSection>
+            )}
+          </div>
+
+          <div>
+            <ProfileSection
+              title="Created Auctions"
+              icon={<FaTag className="text-blue-800" />}
+              count={user.createdAuctions?.length || 0}
+              colorClass="text-blue-800"
+            >
+              {user.createdAuctions && user.createdAuctions.length > 0 ? (
+                <div className="space-y-3">
+                  {user.createdAuctions.map((auction, idx) => (
+                    <CompactAuctionCard key={idx} auction={auction} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={<FaGavel />}
+                  title="You Haven't Created Any Auctions"
+                  message="Create your first auction and start selling!"
+                  action={
+                    <Button to="/auctions/new" variant="primary" icon={<FaGavel />}>
+                      Create Auction
+                    </Button>
+                  }
+                />
+              )}
+            </ProfileSection>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
 
-export default Profile; 
+export default Profile;

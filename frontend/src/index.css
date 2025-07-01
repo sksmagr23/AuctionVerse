@@ -1,5 +1,104 @@
+@import url('https://fonts.googleapis.com/css2?family=Rambla:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
 @import "tailwindcss";
 
-::-webkit-scrollbar{
-    display: none;
+::-webkit-scrollbar {
+  display: none;
+}
+
+*{
+  font-family: "Rambla", sans-serif;
+  font-weight: 500;
+  font-style: normal;
+}
+
+
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade {
+  animation: fade 0.6s ease-out forwards;
+}
+
+.animate-on-scroll {
+  transition: opacity 0.6s, transform 0.6s;
+}
+
+.animate-ping {
+  animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ping {
+  75%,
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.alertify .ajs-header {
+  font-family: inherit;
+  font-weight: 700;
+  color: #14213D;
+  background-color: #FCA311;
+}
+
+.alertify .ajs-body .ajs-content {
+  font-family: inherit;
+  color: #333;
+  padding: 16px 0;
+}
+
+.alertify .ajs-dialog {
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.alertify .ajs-footer {
+  padding: 10px;
+}
+
+.alertify .ajs-footer .ajs-buttons .ajs-button {
+  border-radius: 4px;
+  margin: 0 6px;
+  font-weight: 600;
+  padding: 6px 12px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.alertify .ajs-footer .ajs-buttons .ajs-button.ajs-ok {
+  background-color: #FCA311;
+  color: #000;
+  cursor: pointer;
+}
+
+.alertify .ajs-footer .ajs-buttons .ajs-button.ajs-cancel {
+  background-color: #374151;
+  color: #fff;
+  cursor: pointer;
+}
+
+.alertify .ajs-footer .ajs-buttons .ajs-button.ajs-cancel:hover {
+  background-color: #4b5563;
+}
+
+.alertify-notifier .ajs-message.ajs-success {
+  background-color: #059669;
+  color: white;
+  border-radius: 4px;
+}
+
+.alertify-notifier .ajs-message.ajs-error {
+  background-color: #dc2626;
+  color: white;
+  border-radius: 4px;
 }
